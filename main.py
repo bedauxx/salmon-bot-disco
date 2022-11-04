@@ -9,7 +9,7 @@ from discord.ext import tasks
 from server import keep_alive
 
 my_secret = os.environ['TOKEN']
-CHANNEL_ID = 1035060199305793567  #チャンネルID
+CHANNEL_ID = os.environ['CHANNEL']  #チャンネルID
 
 discord_intents = discord.Intents.all()
 discord_intents.typing = False
@@ -27,93 +27,43 @@ async def on_ready():
 
 
 @bot.command()
-async def now(ctx):
-  apiurl = 'https://spla3.yuu26.com/api/schedule/'
+async def salmon(ctx):
+  apiurl = 'https://spla3.yuu26.com/api/coop-grouping-regular/schedule/'
   r = requests.get(apiurl)
-  result = r.json()["result"]
+  result = r.json()["results"]
 
-  print(result["bankara_open"][0]["stages"][0]["name"],
-        result["bankara_open"][0]["stages"][1]["name"])
+  print(
+    result[0]["stage"]["name"],
+    result[0]["weapons"][0]["name"],
+    result[0]["weapons"][1]["name"],
+    result[0]["weapons"][2]["name"],
+    result[0]["weapons"][3]["name"],
+  )
+  #2022-11-02T17:00:00+09:00
+  str_time_start = datetime.datetime.fromisoformat(
+    result[0]["start_time"]).strftime('%y/%m/%d %H:%M:%S')
+  str_time_end = datetime.datetime.fromisoformat(
+    result[0]["end_time"]).strftime('%y/%m/%d %H:%M:%S')
 
-  str_time_start = result["regular"][0]["start_time"][11:]
-  str_time_end = result["regular"][0]["end_time"][11:]
+  str_salmonrun_stage = result[0]["stage"]["name"]
+  str_salmonrun_weapon_A = result[0]["weapons"][0]["name"]
+  str_salmonrun_weapon_B = result[0]["weapons"][1]["name"]
+  str_salmonrun_weapon_C = result[0]["weapons"][2]["name"]
+  str_salmonrun_weapon_D = result[0]["weapons"][3]["name"]
 
-  str_bankara_challenge_rule = result["bankara_challenge"][0]["rule"]["name"]
-  str_bankara_open_rule = result["bankara_open"][0]["rule"]["name"]
-
-  str_regular_a = result["regular"][0]["stages"][0]["name"]
-  str_bankara_challenge_a = result["bankara_challenge"][0]["stages"][0]["name"]
-  str_bankara_open_a = result["bankara_open"][0]["stages"][0]["name"]
-  str_regular_b = result["regular"][0]["stages"][1]["name"]
-  str_bankara_challenge_b = result["bankara_challenge"][0]["stages"][1]["name"]
-  str_bankara_open_b = result["bankara_open"][0]["stages"][1]["name"]
-
-  str_regular = str_regular_a + "," + str_regular_b
-  str_bankara_challenge = str_bankara_challenge_a + "," + str_bankara_challenge_b
-  str_bankara_open = str_bankara_open_a + "," + str_bankara_open_b
+  str_weapons = str_salmonrun_weapon_A + "," + str_salmonrun_weapon_B + "," + str_salmonrun_weapon_C + "," + str_salmonrun_weapon_D
 
   if ctx.author == bot.user:
     return
 
-  await ctx.send(
-    '''\
+  await ctx.send('''\
 ```asciidoc
 %s 〜 %s
-[ナワバリ]
+[サーモンラン]
 %s
-[バンカラ(チャレンジ)(%s)]
-%s
-[バンカラ(オープン)(%s)]
 %s
 ```\
-        ''' %
-    (str_time_start, str_time_end, str_regular, str_bankara_challenge_rule,
-     str_bankara_challenge, str_bankara_open_rule, str_bankara_open))
-
-
-@bot.command()
-async def next(ctx):
-  apiurl = 'https://spla3.yuu26.com/api/schedule/'
-  r = requests.get(apiurl)
-  result = r.json()["result"]
-
-  print(result["bankara_open"][1]["stages"][0]["name"],
-        result["bankara_open"][0]["stages"][1]["name"])
-
-  str_time_start = result["regular"][1]["start_time"][11:]
-  str_time_end = result["regular"][1]["end_time"][11:]
-
-  str_bankara_challenge_rule = result["bankara_challenge"][1]["rule"]["name"]
-  str_bankara_open_rule = result["bankara_open"][1]["rule"]["name"]
-
-  str_regular_a = result["regular"][1]["stages"][0]["name"]
-  str_bankara_challenge_a = result["bankara_challenge"][1]["stages"][0]["name"]
-  str_bankara_open_a = result["bankara_open"][1]["stages"][0]["name"]
-  str_regular_b = result["regular"][1]["stages"][1]["name"]
-  str_bankara_challenge_b = result["bankara_challenge"][1]["stages"][1]["name"]
-  str_bankara_open_b = result["bankara_open"][1]["stages"][1]["name"]
-
-  str_regular = str_regular_a + "," + str_regular_b
-  str_bankara_challenge = str_bankara_challenge_a + "," + str_bankara_challenge_b
-  str_bankara_open = str_bankara_open_a + "," + str_bankara_open_b
-
-  if ctx.author == bot.user:
-    return
-
-  await ctx.send(
-    '''\
-```asciidoc
-%s 〜 %s
-[ナワバリ]
-%s
-[バンカラ(チャレンジ)(%s)]
-%s
-[バンカラ(オープン)(%s)]
-%s
-```\
-        ''' %
-    (str_time_start, str_time_end, str_regular, str_bankara_challenge_rule,
-     str_bankara_challenge, str_bankara_open_rule, str_bankara_open))
+        ''' % (str_time_start, str_time_end, str_salmonrun_stage, str_weapons))
 
 
 @tasks.loop(seconds=60)
@@ -122,49 +72,42 @@ async def loop():
   JST = datetime.timezone(t_delta, 'JST')
   now = datetime.datetime.now(JST).strftime('%H:%M')
   #print(now)
-  if now == '07:00' or now == '07:00' or now == '09:00' or now == '11:00' or now == '13:00' or now == '15:00' or now == '17:00' or now == '19:00' or now == '21:00' or now == '23:00' or now == '01:00' or now == '03:00' or now == '05:00':
+  if now == '00:00' or now == '12:00':
     await bot.wait_until_ready()
-    channel = bot.get_channel(CHANNEL_ID)
-    apiurl = 'https://spla3.yuu26.com/api/schedule/'
+    channel = bot.get_channel(int(CHANNEL_ID))
+    apiurl = 'https://spla3.yuu26.com/api/coop-grouping-regular/schedule/'
     r = requests.get(apiurl)
-    result = r.json()["result"]
+    result = r.json()["results"]
 
-    print(result["bankara_open"][0]["stages"][0]["name"],
-          result["bankara_open"][0]["stages"][1]["name"])
+    print(
+      result[0]["stage"]["name"],
+      result[0]["weapons"][0]["name"],
+      result[0]["weapons"][1]["name"],
+      result[0]["weapons"][2]["name"],
+      result[0]["weapons"][3]["name"],
+    )
 
-    str_time_start = result["regular"][0]["start_time"][11:]
-    str_time_end = result["regular"][0]["end_time"][11:]
+    str_time_start = datetime.datetime.fromisoformat(
+      result[0]["start_time"]).strftime('%y/%m/%d %H:%M:%S')
+    str_time_end = datetime.datetime.fromisoformat(
+      result[0]["end_time"]).strftime('%y/%m/%d %H:%M:%S')
 
-    str_bankara_challenge_rule = result["bankara_challenge"][0]["rule"]["name"]
-    str_bankara_open_rule = result["bankara_open"][0]["rule"]["name"]
+    str_salmonrun_stage = result[0]["stage"]["name"]
+    str_salmonrun_weapon_A = result[0]["weapons"][0]["name"]
+    str_salmonrun_weapon_B = result[0]["weapons"][1]["name"]
+    str_salmonrun_weapon_C = result[0]["weapons"][2]["name"]
+    str_salmonrun_weapon_D = result[0]["weapons"][3]["name"]
 
-    str_regular_a = result["regular"][0]["stages"][0]["name"]
-    str_bankara_challenge_a = result["bankara_challenge"][0]["stages"][0][
-      "name"]
-    str_bankara_open_a = result["bankara_open"][0]["stages"][0]["name"]
-    str_regular_b = result["regular"][0]["stages"][1]["name"]
-    str_bankara_challenge_b = result["bankara_challenge"][0]["stages"][1][
-      "name"]
-    str_bankara_open_b = result["bankara_open"][0]["stages"][1]["name"]
+    str_weapons = str_salmonrun_weapon_A + "," + str_salmonrun_weapon_B + "," + str_salmonrun_weapon_C + "," + str_salmonrun_weapon_D
 
-    str_regular = str_regular_a + "," + str_regular_b
-    str_bankara_challenge = str_bankara_challenge_a + "," + str_bankara_challenge_b
-    str_bankara_open = str_bankara_open_a + "," + str_bankara_open_b
-
-    await channel.send(
-      '''\
+    await channel.send('''\
 ```asciidoc
 %s 〜 %s
-[ナワバリ]
+[サーモンラン]
 %s
-[バンカラ(チャレンジ)(%s)]
-%s
-[バンカラ(オープン)(%s)]
 %s
 ```\
-        ''' %
-      (str_time_start, str_time_end, str_regular, str_bankara_challenge_rule,
-       str_bankara_challenge, str_bankara_open_rule, str_bankara_open))
+        ''' % (str_time_start, str_time_end, str_salmonrun_stage, str_weapons))
 
 
 @bot.listen()
